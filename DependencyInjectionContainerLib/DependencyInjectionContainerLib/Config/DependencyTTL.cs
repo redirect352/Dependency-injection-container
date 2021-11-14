@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace DependencyInjectionContainerLib.Config
 {
-    class Class1
+    public enum ImplementationsTTL
     {
+        Singleton,
+        InstancePerDependency
     }
 }
