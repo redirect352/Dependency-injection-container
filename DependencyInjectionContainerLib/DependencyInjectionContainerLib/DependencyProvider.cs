@@ -12,7 +12,7 @@ namespace DependencyInjectionContainerLib
     {
         private DependencyConfig Config;
         private Dictionary<Type, object> DependenciesPool = new Dictionary<Type, object>();
-
+        private Stack<Type> DependecyStack = new Stack<Type>();
 
         public DependencyProvider(DependencyConfig dependencyConfig)
         {
@@ -20,13 +20,15 @@ namespace DependencyInjectionContainerLib
         }
 
 
-        TDependency Resolve<TDependency>() where TDependency : class
+        public TDependency Resolve<TDependency>() where TDependency : class
         {
             return  (TDependency)Resolve(typeof(TDependency));
         }
 
         public object Resolve(Type dependencyType)
         {
+            DependecyStack.Push(dependencyType);
+            object result = null;
             var impl = Config.GetImplementationInfo(dependencyType);
             if (impl.Count == 0)
             {
@@ -35,25 +37,25 @@ namespace DependencyInjectionContainerLib
             var usedImpl = impl.First();
             if (DependenciesPool.ContainsKey(dependencyType) && usedImpl.TTL == ImplementationsTTL.Singleton)
             {
-                return DependenciesPool[dependencyType];
+                result =  DependenciesPool[dependencyType];
 
             }
             else
             {
-                var implementation = CreateImplementation(usedImpl.Type);
+                result = CreateImplementation(usedImpl.Type);
                 if (usedImpl.TTL == ImplementationsTTL.Singleton)
                 {
-                    DependenciesPool.Add(dependencyType,implementation);
+                    DependenciesPool.Add(dependencyType,result);
                 }
 
             }
-
-
-            return null;
+            DependecyStack.Pop();
+            return result;
         }
 
         private object CreateImplementation(Type implType)
         {
+            
             foreach (ConstructorInfo constructor in implType.GetConstructors(BindingFlags.Instance | BindingFlags.Public))
             {
                 var constructorParams = constructor.GetParameters();
@@ -62,8 +64,10 @@ namespace DependencyInjectionContainerLib
                 {
                     if (parameterInfo.ParameterType.IsInterface)
                     {
-                        @params.Add(this.Resolve(parameterInfo.ParameterType));
-
+                        if (!DependecyStack.Contains(parameterInfo.ParameterType))
+                            @params.Add(this.Resolve(parameterInfo.ParameterType));
+                        else
+                            @params.Add(null);
                     }
                     else
                     {
@@ -77,17 +81,14 @@ namespace DependencyInjectionContainerLib
                         }
                         
                     }
-
-                    try
-                    {
-                        return Activator.CreateInstance(implType,@params.ToArray());
-
-                    }
-                    catch
-                    {
-                    }
-
                 }
+
+                try
+                {
+                    return Activator.CreateInstance(implType, @params.ToArray());
+                }
+                catch{}
+
 
             }
 

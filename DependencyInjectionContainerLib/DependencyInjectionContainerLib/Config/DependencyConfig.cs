@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DependencyInjectionContainerLib.Config
 {
-    public class DependencyConfig :IDependencyConfig
+    public class DependencyConfig 
     {
         private Dictionary<Type, List<InterfaceImplementation>> Dependencies { get; set; } = new Dictionary<Type, List<InterfaceImplementation>>();
 
@@ -22,17 +22,65 @@ namespace DependencyInjectionContainerLib.Config
 
         public void Register(Type dependencyType, Type implementationType, ImplementationsTTL time)
         {
+
+            if (dependencyType.IsGenericTypeDefinition && implementationType.IsGenericTypeDefinition) 
+            {
+                if (dependencyType.GetGenericArguments().Length== implementationType.GetGenericArguments().Length) 
+                {
+                  
+                    var dep = dependencyType.GetGenericArguments();
+                    var imp = implementationType.GetGenericArguments();
+                    bool IsAssignable = true;
+                    for (int i = 0; i < dep.Length; i++) 
+                    {
+                        var depContr = dep[i].GetGenericParameterConstraints();
+                        var inpContr = imp[i].GetGenericParameterConstraints();
+                        if (depContr.Length != inpContr.Length) 
+                        {
+                            IsAssignable = false;
+                        }
+                        for (int j = 0; j< depContr.Length && IsAssignable; j++) 
+                        {
+                            IsAssignable = depContr[i].IsAssignableFrom(inpContr[i]);
+                        }
+                    
+                    }
+                    if (IsAssignable) 
+                    {
+                        if (!Dependencies.ContainsKey(dependencyType))
+                        {
+                            Dependencies.Add(dependencyType, new List<InterfaceImplementation>());
+                        }
+                        var tmp = Dependencies[dependencyType].Where((InterfaceImplementation impl) => (impl.Type == implementationType)) ;
+                        if (tmp.Count() == 0)
+                        {
+                            Dependencies[dependencyType].Add(new InterfaceImplementation(implementationType, time));
+                        }
+
+                        return;
+                    }
+
+                }
+            
+            
+            }
+            
             if (!dependencyType.IsAssignableFrom(implementationType))
             {
                 throw new ArgumentException("Incompatible parameters type");
             }
 
-            
+
             if (!Dependencies.ContainsKey(dependencyType))
             {
                 Dependencies.Add(dependencyType, new List<InterfaceImplementation>());
             }
-            Dependencies[dependencyType].Add(new InterfaceImplementation(implementationType, time));
+            var l = Dependencies[dependencyType].Where((InterfaceImplementation imp) => (imp.Type == implementationType));
+            if (l.Count() == 0)
+            {
+                Dependencies[dependencyType].Add(new InterfaceImplementation(implementationType, time));
+            }
+        
         }
 
         internal List<InterfaceImplementation> GetImplementationInfo(Type type)
@@ -41,8 +89,28 @@ namespace DependencyInjectionContainerLib.Config
             {
                 return Dependencies[type];
             }
+            else if (type.IsGenericType) 
+            {
+                var list =new List<InterfaceImplementation>(); ;
+                if (Dependencies.ContainsKey(type.GetGenericTypeDefinition())) 
+                {
+                    var res = Dependencies[type.GetGenericTypeDefinition()];
+                    var resElement = res.FirstOrDefault();
+                    InterfaceImplementation implementation = new InterfaceImplementation( resElement.Type.MakeGenericType(type.GetGenericArguments()), resElement.TTL);
+
+                    list.Add(implementation);
+
+
+                }
+                return list;
+
+            }
             else
             {
+
+
+
+
                 return new List<InterfaceImplementation>();
             }
 
