@@ -30,27 +30,68 @@ namespace DependencyInjectionContainerLib
             DependecyStack.Push(dependencyType);
             object result = null;
             var impl = Config.GetImplementationInfo(dependencyType);
-            if (impl.Count == 0)
+
+
+            if (impl.Count == 1)
+            {
+                var usedImpl = impl.First();
+                if (DependenciesPool.ContainsKey(usedImpl.Type) && usedImpl.TTL == ImplementationsTTL.Singleton)
+                {
+                    result = DependenciesPool[dependencyType];
+
+                }
+                else
+                {
+                    result = CreateImplementation(usedImpl.Type);
+                    if (usedImpl.TTL == ImplementationsTTL.Singleton)
+                    {
+                        DependenciesPool.Add(usedImpl.Type, result);
+                    }
+
+                }
+            } else if (dependencyType.IsGenericType)
+            {
+                if (dependencyType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                {
+                    var mainDependency = dependencyType.GetGenericArguments().First();
+                    var mainTypeImlementations = Config.GetImplementationInfo(mainDependency);
+                    if (mainTypeImlementations.Count>=1)
+                    {
+                        Type listType = typeof(List<>).MakeGenericType(new Type[] { mainDependency });
+                        result =  Activator.CreateInstance(listType);
+                        foreach (var usedImpl in mainTypeImlementations)
+                        {
+                            if (DependenciesPool.ContainsKey(dependencyType) && usedImpl.TTL == ImplementationsTTL.Singleton)
+                            {
+                                listType.GetMethod("Add").Invoke(result, new object[] { DependenciesPool[dependencyType] });
+                            }
+                            else
+                            {
+                                var implementationObject = CreateImplementation(usedImpl.Type);
+                                listType.GetMethod("Add").Invoke(result, new object[] { implementationObject });
+                                if (usedImpl.TTL == ImplementationsTTL.Singleton)
+                                {
+                                    DependenciesPool.Add(usedImpl.Type, implementationObject);
+                                }
+
+                            }
+                        }
+                    }
+
+
+                }
+            }
+            else if (impl.Count == 0)
             {
                 throw new ArgumentException("Dependency not registered");
             }
-            var usedImpl = impl.First();
-            if (DependenciesPool.ContainsKey(dependencyType) && usedImpl.TTL == ImplementationsTTL.Singleton)
-            {
-                result =  DependenciesPool[dependencyType];
 
-            }
-            else
-            {
-                result = CreateImplementation(usedImpl.Type);
-                if (usedImpl.TTL == ImplementationsTTL.Singleton)
-                {
-                    DependenciesPool.Add(dependencyType,result);
-                }
 
-            }
+
+
             DependecyStack.Pop();
             return result;
+        
         }
 
         private object CreateImplementation(Type implType)
