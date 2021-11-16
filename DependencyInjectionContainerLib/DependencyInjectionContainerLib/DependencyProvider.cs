@@ -24,20 +24,29 @@ namespace DependencyInjectionContainerLib
         {
             return  (TDependency)Resolve(typeof(TDependency));
         }
-
         public object Resolve(Type dependencyType)
+        {
+            return Resolve(dependencyType, -1);
+        }
+
+        public TDependency Resolve<TDependency>(int ind) where TDependency : class
+        {
+            return (TDependency)Resolve(typeof(TDependency), ind);
+        }
+
+        public object Resolve(Type dependencyType, int ind)
         {
             DependecyStack.Push(dependencyType);
             object result = null;
-            var impl = Config.GetImplementationInfo(dependencyType);
-
+            var impl = Config.GetImplementationInfo(dependencyType, ind);
+        
 
             if (impl.Count == 1)
             {
                 var usedImpl = impl.First();
                 if (DependenciesPool.ContainsKey(usedImpl.Type) && usedImpl.TTL == ImplementationsTTL.Singleton)
                 {
-                    result = DependenciesPool[dependencyType];
+                    result = DependenciesPool[usedImpl.Type];
 
                 }
                 else
@@ -54,7 +63,7 @@ namespace DependencyInjectionContainerLib
                 if (dependencyType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
                 {
                     var mainDependency = dependencyType.GetGenericArguments().First();
-                    var mainTypeImlementations = Config.GetImplementationInfo(mainDependency);
+                    var mainTypeImlementations = Config.GetImplementationInfo(mainDependency,-1);
                     if (mainTypeImlementations.Count>=1)
                     {
                         Type listType = typeof(List<>).MakeGenericType(new Type[] { mainDependency });
@@ -63,7 +72,7 @@ namespace DependencyInjectionContainerLib
                         {
                             if (DependenciesPool.ContainsKey(dependencyType) && usedImpl.TTL == ImplementationsTTL.Singleton)
                             {
-                                listType.GetMethod("Add").Invoke(result, new object[] { DependenciesPool[dependencyType] });
+                                listType.GetMethod("Add").Invoke(result, new object[] { DependenciesPool[usedImpl.Type] });
                             }
                             else
                             {

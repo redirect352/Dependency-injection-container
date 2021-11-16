@@ -54,7 +54,7 @@ namespace DependencyInjectionContainerLib.Config
                         var tmp = Dependencies[dependencyType].Where((InterfaceImplementation impl) => (impl.Type == implementationType)) ;
                         if (tmp.Count() == 0)
                         {
-                            Dependencies[dependencyType].Add(new InterfaceImplementation(implementationType, time));
+                            Dependencies[dependencyType].Add(new InterfaceImplementation(implementationType, time, Dependencies[dependencyType].Count));
                         }
 
                         return;
@@ -78,16 +78,26 @@ namespace DependencyInjectionContainerLib.Config
             var l = Dependencies[dependencyType].Where((InterfaceImplementation imp) => (imp.Type == implementationType));
             if (l.Count() == 0)
             {
-                Dependencies[dependencyType].Add(new InterfaceImplementation(implementationType, time));
+                Dependencies[dependencyType].Add(new InterfaceImplementation(implementationType, time, Dependencies[dependencyType].Count));
             }
         
         }
 
-        internal List<InterfaceImplementation> GetImplementationInfo(Type type)
+        internal List<InterfaceImplementation> GetImplementationInfo(Type type, int ind)
         {
             if (Dependencies.ContainsKey(type))
             {
-                return Dependencies[type];
+                if (ind >= 0)
+                {
+                    var res = Dependencies[type].Where((InterfaceImplementation im) => (im.Index == ind));
+                    List<InterfaceImplementation> dependencies = new List<InterfaceImplementation>();
+                    foreach (InterfaceImplementation interfaceImplementation in res)
+                    {
+                        dependencies.Add(interfaceImplementation);
+                    }
+                    return dependencies;
+                }
+                    return Dependencies[type];
             }
             else if (type.IsGenericType) 
             {
@@ -107,10 +117,6 @@ namespace DependencyInjectionContainerLib.Config
             }
             else
             {
-
-
-
-
                 return new List<InterfaceImplementation>();
             }
 

@@ -79,6 +79,19 @@ namespace DependencyInjectionTest
             Assert.AreEqual(count,2);
         }
 
+        [TestMethod]
+        public void TestTwoImplementationsWithDifference()
+        {
+            DependencyConfig dependencyConfig = new DependencyConfig();
+            dependencyConfig.Register<IDepend2, TestClass>(ImplementationsTTL.Singleton);
+            dependencyConfig.Register<IDepend2, TestClass2>(ImplementationsTTL.Singleton);
+
+            DependencyProvider provider = new DependencyProvider(dependencyConfig);
+            var res = provider.Resolve<IDepend2>(1);
+            var res2 = provider.Resolve<IDepend2>(0);
+            Assert.IsInstanceOfType(res, typeof(TestClass2));
+            Assert.IsInstanceOfType(res2, typeof(TestClass));
+        }
 
 
 

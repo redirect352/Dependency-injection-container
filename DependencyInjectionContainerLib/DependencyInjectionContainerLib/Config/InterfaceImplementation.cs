@@ -10,11 +10,19 @@ namespace DependencyInjectionContainerLib.Config
     {
         public Type Type { get; private set; }
         public ImplementationsTTL TTL { get; private set; }
-
+        public int Index { get; internal set; }
         public InterfaceImplementation(Type type, ImplementationsTTL tTL)
         {
             TTL = tTL;
             Type = type;
         }
+        public InterfaceImplementation(Type type, ImplementationsTTL tTL, int ind)
+        {
+            TTL = tTL;
+            Type = type;
+            Index = ind;
+        }
+
     }
+
 }
