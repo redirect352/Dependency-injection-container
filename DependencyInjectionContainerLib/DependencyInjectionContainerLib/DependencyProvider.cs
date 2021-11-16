@@ -58,7 +58,6 @@ namespace DependencyInjectionContainerLib
                         result =  Activator.CreateInstance(listType);
                         foreach (var usedImpl in mainTypeImlementations)
                         {
-
                             var iterationResult = ImplementInterface(usedImpl);
                             listType.GetMethod("Add").Invoke(result, new object[] { iterationResult });   
                         }
@@ -69,11 +68,9 @@ namespace DependencyInjectionContainerLib
             }
             else if (impl.Count == 0)
             {
+                DependecyStack.Pop();
                 throw new ArgumentException("Dependency not registered");
             }
-
-
-
 
             DependecyStack.Pop();
             return result;
