@@ -87,8 +87,13 @@ namespace DependencyInjectionTest
             dependencyConfig.Register<IDepend2, TestClass2>(ImplementationsTTL.Singleton);
 
             DependencyProvider provider = new DependencyProvider(dependencyConfig);
-            var res = provider.Resolve<IDepend2>(1);
-            var res2 = provider.Resolve<IDepend2>(0);
+
+            int? test2Numb = provider.GetRealizationNumber(typeof(IDepend2), typeof(TestClass2)),
+                test1Numb = provider.GetRealizationNumber(typeof(IDepend2), typeof(TestClass));
+            Assert.IsNotNull(test2Numb);
+            Assert.IsNotNull(test1Numb);
+            var res = provider.Resolve<IDepend2>(test2Numb.Value);
+            var res2 = provider.Resolve<IDepend2>(test1Numb.Value);
             Assert.IsInstanceOfType(res, typeof(TestClass2));
             Assert.IsInstanceOfType(res2, typeof(TestClass));
         }
