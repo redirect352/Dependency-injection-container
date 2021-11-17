@@ -9,10 +9,28 @@ namespace DependencyInjectionTest
     [TestClass]
     public class DependencyTest
     {
+        private DependencyConfig dependencyConfig;
+        [TestInitialize]
+        public void Initialize()
+        {
+            dependencyConfig = new DependencyConfig();
+        }
+
+        [TestMethod]
+        public void TestDependencyInjection()
+        {
+            dependencyConfig.Register<IDepend2, TestClass>(ImplementationsTTL.InstancePerDependency);
+            DependencyProvider provider = new DependencyProvider(dependencyConfig);
+            var res = provider.Resolve<IDepend2>();
+            Assert.IsNotNull(res);
+            Assert.IsInstanceOfType(res, typeof(TestClass));
+
+
+        }
+
         [TestMethod]
         public void TestOpenGenericRealization()
         {
-            DependencyConfig dependencyConfig = new DependencyConfig();        
             dependencyConfig.Register<IDepend2, TestClass>(ImplementationsTTL.InstancePerDependency);
             dependencyConfig.Register<IDepend3, TestClass>(ImplementationsTTL.InstancePerDependency);
 
@@ -20,19 +38,18 @@ namespace DependencyInjectionTest
 
             DependencyProvider provider = new DependencyProvider(dependencyConfig);
             var res = provider.Resolve<IDepend<IDepend3>>();
+            Assert.IsInstanceOfType(res, typeof(Realization<IDepend3>));
+
 
         }
         [TestMethod]
         public void TestRegistrationAsSelf()
         {
-            DependencyConfig dependencyConfig = new DependencyConfig();
-
-
             dependencyConfig.Register<TestClass, TestClass>(ImplementationsTTL.InstancePerDependency);
-            
+
             DependencyProvider provider = new DependencyProvider(dependencyConfig);
             var res = provider.Resolve<TestClass>();
-            Assert.IsInstanceOfType(res, typeof(TestClass)); 
+            Assert.IsInstanceOfType(res, typeof(TestClass));
 
 
         }
@@ -40,19 +57,17 @@ namespace DependencyInjectionTest
         [TestMethod]
         public void TestSingleton()
         {
-            DependencyConfig dependencyConfig = new DependencyConfig();
             dependencyConfig.Register<IDepend3, TestClass>(ImplementationsTTL.Singleton);
             DependencyProvider provider = new DependencyProvider(dependencyConfig);
             var res1 = provider.Resolve<IDepend3>();
             var res2 = provider.Resolve<IDepend3>();
             Assert.IsInstanceOfType(res1, typeof(TestClass));
-            Assert.AreSame(res1,res2);
+            Assert.AreSame(res1, res2);
         }
 
         [TestMethod]
         public void TestInstancePerDependency()
         {
-            DependencyConfig dependencyConfig = new DependencyConfig();
             dependencyConfig.Register<IDepend3, TestClass>(ImplementationsTTL.InstancePerDependency);
             DependencyProvider provider = new DependencyProvider(dependencyConfig);
             var res1 = provider.Resolve<IDepend3>();
@@ -65,7 +80,6 @@ namespace DependencyInjectionTest
         [TestMethod]
         public void TestTwoImplementations()
         {
-            DependencyConfig dependencyConfig = new DependencyConfig();
             dependencyConfig.Register<IDepend2, TestClass>(ImplementationsTTL.Singleton);
             dependencyConfig.Register<IDepend2, TestClass2>(ImplementationsTTL.Singleton);
 
@@ -76,13 +90,12 @@ namespace DependencyInjectionTest
             {
                 count++;
             }
-            Assert.AreEqual(count,2);
+            Assert.AreEqual(count, 2);
         }
 
         [TestMethod]
         public void TestTwoImplementationsWithDifference()
         {
-            DependencyConfig dependencyConfig = new DependencyConfig();
             dependencyConfig.Register<IDepend2, TestClass>(ImplementationsTTL.Singleton);
             dependencyConfig.Register<IDepend2, TestClass2>(ImplementationsTTL.Singleton);
 
@@ -98,10 +111,70 @@ namespace DependencyInjectionTest
             Assert.IsInstanceOfType(res2, typeof(TestClass));
         }
 
+        [TestMethod]
+        public void TestNotregisteredType() 
+        {
+            dependencyConfig.Register<IDepend2, TestClass2>(ImplementationsTTL.Singleton);
+            DependencyProvider provider = new DependencyProvider(dependencyConfig);
+            Action action = delegate () { provider.Resolve<IDepend3>(); };
+            Assert.ThrowsException<ArgumentException>(action);
+
+        }
+
+        [TestMethod]
+        public void TestNestedDependency()
+        {
+            dependencyConfig.Register<IDepend2, TestNestedDependencyClass>(ImplementationsTTL.Singleton);
+            dependencyConfig.Register<IDepend3, TestClass>(ImplementationsTTL.Singleton);
+
+            DependencyProvider provider = new DependencyProvider(dependencyConfig);
+
+            var res = provider.Resolve<IDepend2>();
+            Assert.IsNotNull(res);
+            Assert.IsInstanceOfType(res, typeof(TestNestedDependencyClass));
+            Assert.IsNotNull(((TestNestedDependencyClass)res).Depend3);
+            Assert.IsInstanceOfType(((TestNestedDependencyClass)res).Depend3, typeof(TestClass));
+        }
+
+        [TestMethod]
+        public void TestNestedIEnumerable()
+        {
+            dependencyConfig.Register<IDepend2, TestNestedEnumClass>(ImplementationsTTL.Singleton);
+            dependencyConfig.Register<IDepend3, TestClass>(ImplementationsTTL.Singleton);
+
+            DependencyProvider provider = new DependencyProvider(dependencyConfig);
+
+            var res = provider.Resolve<IDepend2>();
+            Assert.IsNotNull(res);
+            Assert.IsInstanceOfType(res, typeof(TestNestedEnumClass));
+            Assert.IsNotNull(((TestNestedEnumClass)res).Depend3);
+            Assert.IsInstanceOfType(((TestNestedEnumClass)res).Depend3, typeof(IEnumerable<IDepend3>));
+            int count = 0;
+            foreach (IDepend3 depend2 in ((TestNestedEnumClass)res).Depend3)
+            {
+                count++;
+            }
+            Assert.AreEqual(count,1);
+        }
+
+        [TestMethod]
+        public void TestGenericType()
+        {
+            dependencyConfig.Register<IDepend<IDepend2>, Realization<IDepend2>>(ImplementationsTTL.Singleton);
+            dependencyConfig.Register<IDepend2, TestClass>(ImplementationsTTL.Singleton);
+            DependencyProvider provider = new DependencyProvider(dependencyConfig);
+            var res = provider.Resolve<IDepend<IDepend2>>();
+            Assert.IsNotNull(res);
+            Assert.IsInstanceOfType(res, typeof(Realization<IDepend2>));
+
+        }
 
 
 
     }
+
+    
+
 
     interface IDepend<TDep> where TDep:IDepend2
     {
@@ -140,7 +213,27 @@ namespace DependencyInjectionTest
         // }
     }
 
+    class TestNestedDependencyClass : IDepend2
+    {
+        public IDepend3 Depend3;
+        public TestNestedDependencyClass(IDepend3 depend3)
+        {
+            Depend3 = depend3;
+        
+        }
 
+    }
+
+    class TestNestedEnumClass : IDepend2
+    {
+        public IEnumerable<IDepend3> Depend3;
+        public TestNestedEnumClass(IEnumerable<IDepend3> depend3)
+        {
+            Depend3 = depend3;
+
+        }
+
+    }
 
 
 
