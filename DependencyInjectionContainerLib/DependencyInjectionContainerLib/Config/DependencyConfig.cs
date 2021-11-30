@@ -83,7 +83,7 @@ namespace DependencyInjectionContainerLib.Config
         
         }
 
-        internal List<InterfaceImplementation> GetImplementationInfo(Type type, int ind)
+        public virtual List<InterfaceImplementation> GetImplementationInfo(Type type, int ind)
         {
             if (Dependencies.ContainsKey(type))
             {

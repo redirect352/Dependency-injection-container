@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DependencyInjectionContainerLib.Config
 {
-    class InterfaceImplementation
+    public class InterfaceImplementation
     {
         public Type Type { get; private set; }
         public ImplementationsTTL TTL { get; private set; }

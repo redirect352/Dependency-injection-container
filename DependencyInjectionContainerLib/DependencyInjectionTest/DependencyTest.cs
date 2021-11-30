@@ -3,6 +3,7 @@ using System;
 using DependencyInjectionContainerLib.Config;
 using DependencyInjectionContainerLib;
 using System.Collections.Generic;
+using Moq;
 
 namespace DependencyInjectionTest
 {
@@ -18,15 +19,15 @@ namespace DependencyInjectionTest
 
         [TestMethod]
         public void TestDependencyInjection()
-        {
+        {  
             dependencyConfig.Register<IDepend2, TestClass>(ImplementationsTTL.InstancePerDependency);
             DependencyProvider provider = new DependencyProvider(dependencyConfig);
             var res = provider.Resolve<IDepend2>();
+            
             Assert.IsNotNull(res);
             Assert.IsInstanceOfType(res, typeof(TestClass));
-
-
         }
+
 
         [TestMethod]
         public void TestOpenGenericRealization()
@@ -98,7 +99,8 @@ namespace DependencyInjectionTest
         {
             dependencyConfig.Register<IDepend2, TestClass>(ImplementationsTTL.Singleton);
             dependencyConfig.Register<IDepend2, TestClass2>(ImplementationsTTL.Singleton);
-
+           
+           
             DependencyProvider provider = new DependencyProvider(dependencyConfig);
 
             int? test2Numb = provider.GetRealizationNumber(typeof(IDepend2), typeof(TestClass2)),
